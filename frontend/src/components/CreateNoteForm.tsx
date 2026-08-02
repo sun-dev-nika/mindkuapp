@@ -89,28 +89,51 @@ export function CreateNoteForm({ onCreated }: CreateNoteFormProps): ReactElement
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-label="Crear nota">
-      <div>
-        <label htmlFor="note-title">Título</label>
+    <form className="term-card" onSubmit={handleSubmit} aria-label="Crear nota">
+      <div className="term-field">
+        <label className="term-label" htmlFor="note-title">
+          Título
+        </label>
         <input
           id="note-title"
+          className="term-input"
           type="text"
           value={title}
           onChange={handleTitleChange}
           disabled={isSubmitting}
         />
-        {titleError && <p role="alert">{titleError}</p>}
+        {titleError && (
+          <p role="alert" className="term-error">
+            {titleError}
+          </p>
+        )}
       </div>
 
-      <div>
-        <label htmlFor="note-body">Cuerpo</label>
-        <textarea id="note-body" value={body} onChange={handleBodyChange} disabled={isSubmitting} />
+      <div className="term-field">
+        <label className="term-label" htmlFor="note-body">
+          Cuerpo
+        </label>
+        <textarea
+          id="note-body"
+          className="term-textarea"
+          value={body}
+          onChange={handleBodyChange}
+          disabled={isSubmitting}
+        />
       </div>
 
-      {submitState.status === 'error' && <p role="alert">{submitState.message}</p>}
-      {submitState.status === 'success' && <p role="status">Nota creada.</p>}
+      {submitState.status === 'error' && (
+        <p role="alert" className="term-error">
+          {submitState.message}
+        </p>
+      )}
+      {submitState.status === 'success' && (
+        <p role="status" className="term-success">
+          Nota creada.
+        </p>
+      )}
 
-      <button type="submit" disabled={isSubmitting}>
+      <button className="term-button" type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Creando…' : 'Crear nota'}
       </button>
     </form>

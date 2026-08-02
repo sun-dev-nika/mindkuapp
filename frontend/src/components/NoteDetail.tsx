@@ -127,47 +127,77 @@ export function NoteDetail({ noteId, onSaved }: NoteDetailProps): ReactElement {
   }
 
   if (loadState.status === 'loading') {
-    return <p role="status">Cargando nota…</p>;
+    return (
+      <p role="status" className="term-muted">
+        Cargando nota…
+      </p>
+    );
   }
 
   if (loadState.status === 'not-found') {
-    return <p role="alert">No existe ninguna nota con id {noteId}.</p>;
+    return (
+      <p role="alert" className="term-error">
+        No existe ninguna nota con id {noteId}.
+      </p>
+    );
   }
 
   if (loadState.status === 'error') {
-    return <p role="alert">{loadState.message}</p>;
+    return (
+      <p role="alert" className="term-error">
+        {loadState.message}
+      </p>
+    );
   }
 
   const isSaving = saveState.status === 'saving';
 
   return (
-    <form onSubmit={handleSubmit} aria-label="Editar nota">
-      <div>
-        <label htmlFor="edit-note-title">Título</label>
+    <form className="term-card" onSubmit={handleSubmit} aria-label="Editar nota">
+      <div className="term-field">
+        <label className="term-label" htmlFor="edit-note-title">
+          Título
+        </label>
         <input
           id="edit-note-title"
+          className="term-input"
           type="text"
           value={title}
           onChange={handleTitleChange}
           disabled={isSaving}
         />
-        {titleError && <p role="alert">{titleError}</p>}
+        {titleError && (
+          <p role="alert" className="term-error">
+            {titleError}
+          </p>
+        )}
       </div>
 
-      <div>
-        <label htmlFor="edit-note-body">Cuerpo</label>
+      <div className="term-field">
+        <label className="term-label" htmlFor="edit-note-body">
+          Cuerpo
+        </label>
         <textarea
           id="edit-note-body"
+          className="term-textarea"
           value={body}
           onChange={handleBodyChange}
           disabled={isSaving}
         />
       </div>
 
-      {saveState.status === 'error' && <p role="alert">{saveState.message}</p>}
-      {saveState.status === 'success' && <p role="status">Nota guardada.</p>}
+      {saveState.status === 'error' && (
+        <p role="alert" className="term-error">
+          {saveState.message}
+        </p>
+      )}
+      {saveState.status === 'success' && (
+        <p role="status" className="term-success">
+          Nota guardada.
+        </p>
+      )}
 
-      <button type="submit" disabled={isSaving}>
+      <button className="term-button" type="submit" disabled={isSaving}>
         {isSaving ? 'Guardando…' : 'Guardar cambios'}
       </button>
     </form>

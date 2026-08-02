@@ -87,19 +87,27 @@ export function NotesList(): ReactElement {
   }
 
   if (state.status === 'loading') {
-    return <p role="status">Cargando notas…</p>;
+    return (
+      <p role="status" className="term-muted">
+        Cargando notas…
+      </p>
+    );
   }
 
   if (state.status === 'error') {
-    return <p role="alert">{state.message}</p>;
+    return (
+      <p role="alert" className="term-error">
+        {state.message}
+      </p>
+    );
   }
 
   if (state.notes.length === 0) {
-    return <p>No hay notas todavía.</p>;
+    return <p className="term-muted">No hay notas todavía.</p>;
   }
 
   return (
-    <ul aria-label="Lista de notas">
+    <ul className="term-list" aria-label="Lista de notas">
       {state.notes.map((note) => {
         const isConfirming = deleteState.status === 'confirming' && deleteState.noteId === note.id;
         const isDeleting = deleteState.status === 'deleting' && deleteState.noteId === note.id;
@@ -109,7 +117,7 @@ export function NotesList(): ReactElement {
             : null;
 
         return (
-          <li key={note.id}>
+          <li key={note.id} className="term-card">
             <Link to={`/notes/${note.id}`}>
               <h3>{note.title}</h3>
             </Link>
@@ -117,25 +125,39 @@ export function NotesList(): ReactElement {
 
             {isConfirming || isDeleting ? (
               <div role="group" aria-label={`Confirmar eliminación de "${note.title}"`}>
-                <span>¿Eliminar esta nota?</span>
+                <span className="term-error">¿Eliminar esta nota?</span>{' '}
                 <button
                   type="button"
+                  className="term-button term-button-danger"
                   onClick={() => handleConfirmDelete(note.id)}
                   disabled={isDeleting}
                 >
                   {isDeleting ? 'Eliminando…' : 'Sí, eliminar'}
                 </button>
-                <button type="button" onClick={handleCancelDelete} disabled={isDeleting}>
+                <button
+                  type="button"
+                  className="term-button"
+                  onClick={handleCancelDelete}
+                  disabled={isDeleting}
+                >
                   Cancelar
                 </button>
               </div>
             ) : (
-              <button type="button" onClick={() => handleDeleteClick(note.id)}>
+              <button
+                type="button"
+                className="term-button term-button-danger"
+                onClick={() => handleDeleteClick(note.id)}
+              >
                 Eliminar
               </button>
             )}
 
-            {deleteError && <p role="alert">{deleteError}</p>}
+            {deleteError && (
+              <p role="alert" className="term-error">
+                {deleteError}
+              </p>
+            )}
           </li>
         );
       })}

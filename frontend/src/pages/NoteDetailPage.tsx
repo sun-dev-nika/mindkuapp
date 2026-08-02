@@ -17,7 +17,11 @@ export function NoteDetailPage(): ReactElement {
   const noteId = Number(id);
 
   if (id === undefined || !Number.isInteger(noteId) || noteId <= 0) {
-    return <p role="alert">Id de nota inválido.</p>;
+    return (
+      <p role="alert" className="term-error">
+        Id de nota inválido.
+      </p>
+    );
   }
 
   return <NoteDetail noteId={noteId} />;

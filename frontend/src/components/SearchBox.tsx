@@ -81,20 +81,38 @@ export function SearchBox(): ReactElement {
   }
 
   return (
-    <section>
+    <section className="term-card">
       <h2>Buscar notas</h2>
-      <label htmlFor="search-notes-input">Buscar en título o cuerpo</label>
-      <input id="search-notes-input" type="search" value={query} onChange={handleQueryChange} />
+      <div className="term-field">
+        <label className="term-label" htmlFor="search-notes-input">
+          Buscar en título o cuerpo
+        </label>
+        <input
+          id="search-notes-input"
+          className="term-input"
+          type="search"
+          value={query}
+          onChange={handleQueryChange}
+        />
+      </div>
 
-      {state.status === 'loading' && <p role="status">Buscando…</p>}
-      {state.status === 'error' && <p role="alert">{state.message}</p>}
+      {state.status === 'loading' && (
+        <p role="status" className="term-muted">
+          Buscando…
+        </p>
+      )}
+      {state.status === 'error' && (
+        <p role="alert" className="term-error">
+          {state.message}
+        </p>
+      )}
       {state.status === 'success' && state.notes.length === 0 && (
-        <p>Sin resultados para &quot;{query.trim()}&quot;.</p>
+        <p className="term-muted">Sin resultados para &quot;{query.trim()}&quot;.</p>
       )}
       {state.status === 'success' && state.notes.length > 0 && (
-        <ul aria-label="Resultados de la búsqueda">
+        <ul className="term-list" aria-label="Resultados de la búsqueda">
           {state.notes.map((note) => (
-            <li key={note.id}>
+            <li key={note.id} className="term-card">
               <Link to={`/notes/${note.id}`}>
                 <h3>{note.title}</h3>
               </Link>

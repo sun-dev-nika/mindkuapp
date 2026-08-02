@@ -1,0 +1,197 @@
+/**
+ * Tema visual fijo tipo terminal (feature 13). Fondo negro, tipografía
+ * monoespaciada, paleta estilo ANSI. Deliberadamente NO hay ningún
+ * `@media (prefers-color-scheme: light)` que revierta esto — es una
+ * decisión de identidad visual a propósito, no un descuido (ver criterio
+ * de aceptación 3). Sin `@import` de fuentes externas: la pila de
+ * `--term-font` depende solo de fuentes monoespaciadas que ya vienen
+ * instaladas en el sistema operativo del usuario.
+ */
+
+:root {
+  --term-bg: #0a0a0a;
+  --term-bg-elevated: #111214;
+  --term-fg: #e6e6e6;
+  --term-fg-dim: #9a9a9a;
+  --term-green: #3ee66f;
+  --term-red: #ff5c57;
+  --term-yellow: #f3f99d;
+  --term-blue: #57c7ff;
+  --term-magenta: #ff6ac1;
+  --term-cyan: #9aedfe;
+  --term-white: #f1f1f0;
+  --term-border: #2a2a2a;
+  --term-font:
+    ui-monospace, 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--term-bg);
+  color: var(--term-fg);
+  font-family: var(--term-font);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--term-green);
+  font-weight: 700;
+  margin: 1.4em 0 0.6em;
+}
+
+a {
+  color: var(--term-cyan);
+}
+
+a:hover {
+  color: var(--term-white);
+}
+
+/* --- clases compartidas, reusadas por los componentes en vez de estilos
+   inline repetidos --- */
+
+.term-label {
+  color: var(--term-green);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Pares "Etiqueta: valor" en línea (banner tipo neofetch), a diferencia de
+   `.term-label` que es de bloque (pensado para `<label>` de formularios). */
+.term-key {
+  color: var(--term-green);
+}
+
+.term-value {
+  color: var(--term-fg);
+}
+
+.term-input,
+.term-textarea {
+  background-color: var(--term-bg-elevated);
+  color: var(--term-fg);
+  border: 1px solid var(--term-green);
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 6px 8px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.term-input:disabled,
+.term-textarea:disabled {
+  opacity: 0.5;
+}
+
+.term-field {
+  margin-bottom: 12px;
+}
+
+.term-button {
+  background-color: transparent;
+  color: var(--term-green);
+  border: 1px solid var(--term-green);
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 6px 14px;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.term-button:hover:not(:disabled) {
+  background-color: var(--term-green);
+  color: var(--term-bg);
+}
+
+.term-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.term-button-danger {
+  color: var(--term-red);
+  border-color: var(--term-red);
+}
+
+.term-button-danger:hover:not(:disabled) {
+  background-color: var(--term-red);
+  color: var(--term-bg);
+}
+
+.term-error {
+  color: var(--term-red);
+}
+
+.term-success {
+  color: var(--term-cyan);
+}
+
+.term-muted {
+  color: var(--term-fg-dim);
+}
+
+.term-card {
+  border: 1px solid var(--term-border);
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin: 10px 0;
+  background-color: var(--term-bg-elevated);
+}
+
+.term-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* --- banner de HomePage --- */
+
+.term-banner-user {
+  color: var(--term-red);
+  margin: 0 0 4px;
+}
+
+.term-banner-rule {
+  color: var(--term-border);
+  margin: 0 0 10px;
+}
+
+.term-ascii {
+  color: var(--term-green);
+  white-space: pre;
+  font-size: 13px;
+  margin: 0;
+}
+
+.term-swatches {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.term-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+}
