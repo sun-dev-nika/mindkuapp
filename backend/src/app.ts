@@ -42,5 +42,14 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
 
+  // `console.error` acá es un log de servidor para un error inesperado (no
+  // `ApiError`, es decir algo que no debería pasar), distinto del
+  // `console.log` de debug suelto que prohíbe docs/architecture.md — esa
+  // regla apunta a no mezclar logs de depuración con la respuesta al
+  // cliente, no a dejar el servidor sin visibilidad de errores reales. La
+  // respuesta al cliente sigue siendo genérica (nunca se filtra el detalle
+  // ni el stack); el detalle real queda en stderr, donde el hosting
+  // (Railway) lo captura en sus "Deploy Logs" para poder diagnosticar.
+  console.error(err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });
