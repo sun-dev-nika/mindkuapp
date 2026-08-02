@@ -3,6 +3,12 @@
 Aplicación web de notas: crear, listar, ver/editar, eliminar y buscar
 notas, con links directos y compartibles a cada nota.
 
+## Deploy
+
+- **Frontend:** https://mindkuapp.vercel.app
+- **Backend (API):** https://mindkuapp-production.up.railway.app
+- **Base de datos:** MySQL en Railway
+
 ## Stack
 
 - **Backend:** Node.js + Express + TypeScript, MySQL sin ORM (`mysql2`,
