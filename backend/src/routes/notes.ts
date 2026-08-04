@@ -4,11 +4,15 @@ import { createNote, deleteNote, getNoteById, listNotes, searchNotes, updateNote
 import { ApiError } from '../errors';
 import type { CreateNoteInput, UpdateNoteInput } from '../types';
 
+// Todas las rutas de este router se montan después de `requireAuth` en
+// app.ts, así que `req.userId` siempre está presente acá (nunca `undefined`)
+// — de ahí el `as number` en cada handler, en vez de repetir un chequeo que
+// ya hizo el middleware.
 export const notesRouter = Router();
 
-notesRouter.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+notesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const notes = await listNotes();
+    const notes = await listNotes(req.userId as number);
     res.status(200).json(notes);
   } catch (err) {
     next(err);
@@ -87,7 +91,7 @@ function parseSearchQuery(rawQuery: unknown): string {
 notesRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = parseCreateNoteInput(req.body);
-    const note = await createNote(input);
+    const note = await createNote(req.userId as number, input);
     res.status(201).json(note);
   } catch (err) {
     next(err);
@@ -101,7 +105,7 @@ notesRouter.post('/', async (req: Request, res: Response, next: NextFunction) =>
 notesRouter.get('/search', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = parseSearchQuery(req.query.q);
-    const notes = query.length === 0 ? [] : await searchNotes(query);
+    const notes = query.length === 0 ? [] : await searchNotes(req.userId as number, query);
     res.status(200).json(notes);
   } catch (err) {
     next(err);
@@ -111,7 +115,7 @@ notesRouter.get('/search', async (req: Request, res: Response, next: NextFunctio
 notesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseNoteId(req.params.id);
-    const note = await getNoteById(id);
+    const note = await getNoteById(req.userId as number, id);
     if (!note) {
       throw new ApiError(404, 'Nota no encontrada');
     }
@@ -125,7 +129,7 @@ notesRouter.put('/:id', async (req: Request, res: Response, next: NextFunction) 
   try {
     const id = parseNoteId(req.params.id);
     const input = parseUpdateNoteInput(req.body);
-    const note = await updateNote(id, input);
+    const note = await updateNote(req.userId as number, id, input);
     if (!note) {
       throw new ApiError(404, 'Nota no encontrada');
     }
@@ -138,7 +142,7 @@ notesRouter.put('/:id', async (req: Request, res: Response, next: NextFunction) 
 notesRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseNoteId(req.params.id);
-    const wasDeleted = await deleteNote(id);
+    const wasDeleted = await deleteNote(req.userId as number, id);
     if (!wasDeleted) {
       throw new ApiError(404, 'Nota no encontrada');
     }

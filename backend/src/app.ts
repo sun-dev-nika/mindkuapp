@@ -1,7 +1,10 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 
 import { ApiError } from './errors';
+import { requireAuth } from './middleware/requireAuth';
+import { authRouter } from './routes/auth';
 import { notesRouter } from './routes/notes';
 
 const DEFAULT_FRONTEND_ORIGIN = 'http://localhost:5173';
@@ -17,11 +20,12 @@ const DEFAULT_FRONTEND_ORIGIN = 'http://localhost:5173';
  * ejemplo `http://localhost:5173,https://notes-web.vercel.app`), para poder
  * tener development y producción habilitados a la vez durante una
  * transición de deploy, sin tener que tocar código — solo la variable de
- * entorno del hosting (ver feature 10, todavía pendiente). Default a
- * `http://localhost:5173` (Vite dev) si no se define nada. Deliberadamente
- * NO se usa `origin: '*'` (cualquier origen): aunque este MVP no tiene
- * autenticación todavía, permitir cualquier origen de forma descuidada es
- * un hábito peligroso si más adelante se agregan cookies/sesiones.
+ * entorno del hosting. Default a `http://localhost:5173` (Vite dev) si no
+ * se define nada. Deliberadamente NO se usa `origin: '*'` (cualquier
+ * origen): desde la feature `backend_auth` el backend maneja cookies de
+ * sesión, y con `credentials: true` la especificación de CORS ni siquiera
+ * permite combinar eso con `origin: '*'` — hay que listar orígenes
+ * concretos.
  */
 const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? DEFAULT_FRONTEND_ORIGIN)
   .split(',')
@@ -30,9 +34,21 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? DEFAULT_FRONTEND_ORIGIN)
 
 export const app = express();
 
-app.use(cors({ origin: allowedOrigins }));
+// `credentials: true` es lo que le dice al navegador "está bien mandar/
+// aceptar cookies en peticiones cross-origin a este backend" — sin esto, la
+// cookie de sesión (httpOnly, fijada por POST /auth/login) nunca viajaría de
+// vuelta al backend en pedidos posteriores desde el frontend, aunque el
+// origen esté permitido. El frontend, del otro lado, tiene que mandar cada
+// `fetch` con `credentials: 'include'` para que el navegador incluya la
+// cookie (eso es responsabilidad de la feature `frontend_auth`, no de acá).
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
-app.use('/notes', notesRouter);
+app.use(cookieParser());
+app.use('/auth', authRouter);
+// `requireAuth` se monta ACÁ, antes de `notesRouter` y después de
+// `authRouter`: todo `/notes/*` exige sesión válida, pero `/auth/register` y
+// `/auth/login` (que todavía no tienen sesión) no pasan por este middleware.
+app.use('/notes', requireAuth, notesRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express solo reconoce
 // middleware de error si tiene 4 parámetros; `next` es obligatorio aunque no se use.

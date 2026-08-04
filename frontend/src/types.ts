@@ -27,3 +27,15 @@ export interface UpdateNoteInput {
   title?: string;
   body?: string | null;
 }
+
+/**
+ * Forma pública de un usuario autenticado, tal como la devuelven
+ * `POST /auth/register`, `POST /auth/login` y `GET /auth/me`. Misma forma
+ * que `AuthUser` en `backend/src/types.ts` — a propósito NUNCA incluye la
+ * contraseña ni su hash, esos campos no salen del backend.
+ */
+export interface AuthUser {
+  id: number;
+  email: string;
+  createdAt: string;
+}

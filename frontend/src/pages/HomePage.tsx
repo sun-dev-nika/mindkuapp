@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useAuth } from '../AuthContext';
 import { CreateNoteForm } from '../components/CreateNoteForm';
 import { NotesList } from '../components/NotesList';
 import { SearchBox } from '../components/SearchBox';
@@ -39,6 +40,7 @@ const SWATCH_COLORS = [
 export function HomePage(): ReactElement {
   const [noteIdInput, setNoteIdInput] = useState('');
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   function handleNoteIdInputChange(event: ChangeEvent<HTMLInputElement>): void {
     setNoteIdInput(event.target.value);
@@ -50,6 +52,16 @@ export function HomePage(): ReactElement {
     if (Number.isInteger(id) && id > 0) {
       navigate(`/notes/${id}`);
     }
+  }
+
+  async function handleLogout(): Promise<void> {
+    // No hay nada que validar ni ningún estado de error propio que mostrar
+    // acá: si `logout()` fallara (por ejemplo, el backend no responde), la
+    // cookie de sesión igual pudo haber quedado limpia del lado del
+    // navegador o no — en cualquier caso, mandar a `/login` es el resultado
+    // seguro (`RequireAuth` vuelve a chequear la sesión real igual).
+    await logout();
+    navigate('/login', { replace: true });
   }
 
   return (
@@ -77,6 +89,15 @@ export function HomePage(): ReactElement {
             <span key={color} className="term-swatch" style={{ backgroundColor: color }} />
           ))}
         </div>
+      </div>
+
+      <div className="term-card">
+        <p>
+          <span className="term-key">Sesión:</span> <span className="term-value">{user?.email}</span>
+        </p>
+        <button className="term-button" type="button" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
       </div>
 
       <h1>Notas</h1>

@@ -2,46 +2,26 @@
  * Cliente REST tipado del backend de notas. Única capa del frontend que le
  * habla al backend (ver docs/architecture.md) — ningún componente debe
  * llamar a `fetch` directamente.
+ *
+ * Todas las llamadas mandan `credentials: 'include'`: desde la feature
+ * `backend_auth`, `/notes/*` exige una sesión válida vía una cookie
+ * httpOnly, y el navegador solo la incluye en un pedido cross-origin (el
+ * frontend y el backend viven en dominios/puertos distintos) si el `fetch`
+ * lo pide explícitamente así — sin esto, cada llamada fallaría con `401`
+ * aunque el login haya funcionado.
  */
+import { API_BASE_URL, ApiError, readErrorMessage } from './httpClient';
 import type { CreateNoteInput, Note, UpdateNoteInput } from '../types';
 
-const DEFAULT_API_BASE_URL = 'http://localhost:3000';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
-
-/** Error del dominio: transporta el código HTTP junto al mensaje del backend. */
-export class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-/**
- * Intenta leer `{ error: string }` del body de una respuesta fallida (mismo
- * contrato que expone el backend, ver `backend/src/app.ts`). Si el body no
- * es JSON válido o no trae `error`, cae al mensaje de respaldo recibido por
- * parámetro — nunca se propaga un error sin mensaje legible al componente.
- */
-async function readErrorMessage(response: Response, fallback: string): Promise<string> {
-  try {
-    const body: unknown = await response.json();
-    const candidate = body as { error?: unknown } | null;
-    if (candidate && typeof candidate.error === 'string' && candidate.error.length > 0) {
-      return candidate.error;
-    }
-  } catch {
-    // Body no era JSON válido: se usa el mensaje de respaldo.
-  }
-  return fallback;
-}
+// Re-exportado para que `CreateNoteForm`/`NoteDetail`/`NotesList`/
+// `SearchBox` sigan importando `ApiError` desde `notesApi.ts` como ya
+// hacían, sin tener que tocarlos — la definición real ahora vive en
+// `httpClient.ts` (ver ese archivo para el porqué).
+export { ApiError };
 
 /** Obtiene todas las notas desde `GET /notes`. */
 export async function getNotes(): Promise<Note[]> {
-  const response = await fetch(`${API_BASE_URL}/notes`);
+  const response = await fetch(`${API_BASE_URL}/notes`, { credentials: 'include' });
 
   if (!response.ok) {
     const fallback = `Error ${response.status} al obtener las notas`;
@@ -56,6 +36,7 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
   const response = await fetch(`${API_BASE_URL}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(input),
   });
 
@@ -74,7 +55,7 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
  * otro error con `err instanceof ApiError && err.statusCode === 404`.
  */
 export async function getNoteById(id: number): Promise<Note> {
-  const response = await fetch(`${API_BASE_URL}/notes/${id}`);
+  const response = await fetch(`${API_BASE_URL}/notes/${id}`, { credentials: 'include' });
 
   if (!response.ok) {
     const fallback = `Error ${response.status} al obtener la nota`;
@@ -89,6 +70,7 @@ export async function updateNote(id: number, input: UpdateNoteInput): Promise<No
   const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(input),
   });
 
@@ -108,6 +90,7 @@ export async function updateNote(id: number, input: UpdateNoteInput): Promise<No
 export async function deleteNote(id: number): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
     method: 'DELETE',
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -126,7 +109,9 @@ export async function deleteNote(id: number): Promise<void> {
  */
 export async function searchNotes(query: string): Promise<Note[]> {
   const params = new URLSearchParams({ q: query });
-  const response = await fetch(`${API_BASE_URL}/notes/search?${params.toString()}`);
+  const response = await fetch(`${API_BASE_URL}/notes/search?${params.toString()}`, {
+    credentials: 'include',
+  });
 
   if (!response.ok) {
     const fallback = `Error ${response.status} al buscar notas`;
