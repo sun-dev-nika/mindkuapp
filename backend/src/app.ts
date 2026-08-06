@@ -1,8 +1,13 @@
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@as-integrations/express4';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 
 import { ApiError } from './errors';
+import { buildContext, type GraphQLContext } from './graphql/context';
+import { resolvers } from './graphql/resolvers';
+import { typeDefs } from './graphql/schema';
 import { requireAuth } from './middleware/requireAuth';
 import { authRouter } from './routes/auth';
 import { notesRouter } from './routes/notes';
@@ -49,6 +54,49 @@ app.use('/auth', authRouter);
 // `authRouter`: todo `/notes/*` exige sesión válida, pero `/auth/register` y
 // `/auth/login` (que todavía no tienen sesión) no pasan por este middleware.
 app.use('/notes', requireAuth, notesRouter);
+
+/**
+ * `/graphql` es una capa alternativa sobre el mismo dominio de notas, no un
+ * segundo backend: expone el mismo schema (`type Note`, queries `notes` /
+ * `note`, mutations `createNote` / `updateNote` / `deleteNote`) y aplica la
+ * misma autenticación por cookie de sesión que REST, pero resuelta en
+ * `graphql/context.ts` en vez de en un middleware de Express montado antes
+ * de la ruta. `buildContext` marca el error de "sin sesión"/"sesión
+ * inválida" con `extensions.http.status: 401` (ver `graphql/context.ts`),
+ * así que la respuesta HTTP sigue siendo un 401 real, igual que REST — no el
+ * 200 que usa GraphQL por defecto para errores de resolver.
+ *
+ * Introspección habilitada solo fuera de producción: sirve para explorar el
+ * schema en desarrollo (Apollo Sandbox u otro cliente GraphQL) sin exponer
+ * el schema completo de un backend público en producción.
+ */
+const apolloServer = new ApolloServer<GraphQLContext>({
+  typeDefs,
+  resolvers,
+  introspection: process.env.NODE_ENV !== 'production',
+  // `docs/architecture.md` prohíbe filtrar un stack trace al cliente en
+  // cualquier respuesta (no solo en el middleware de error REST) — sin
+  // esto, Apollo Server incluye el stack de cada error en `extensions`
+  // mientras `NODE_ENV` no sea `production`, que es exactamente cuando más
+  // se prueba y depura manualmente este endpoint.
+  includeStacktraceInErrorResponses: false,
+});
+
+/**
+ * `ApolloServer#start()` es asíncrono (inicializa plugins internos) y debe
+ * completarse antes de montar `expressMiddleware`, así que no puede hacerse
+ * de forma síncrona al construir `app` como el resto de las rutas. Se expone
+ * esta promesa para que los tests de GraphQL puedan esperarla en
+ * `beforeAll` antes de mandar la primera petición a `/graphql` — los tests
+ * REST no la necesitan porque nunca tocan esa ruta.
+ */
+export const graphqlServerReady: Promise<void> = apolloServer.start().then(() => {
+  app.use(
+    '/graphql',
+    express.json(),
+    expressMiddleware(apolloServer, { context: buildContext }),
+  );
+});
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express solo reconoce
 // middleware de error si tiene 4 parámetros; `next` es obligatorio aunque no se use.

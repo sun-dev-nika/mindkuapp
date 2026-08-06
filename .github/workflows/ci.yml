@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NOTES_DB_HOST: 127.0.0.1
+  NOTES_DB_PORT: 3306
+  NOTES_DB_USER: root
+  NOTES_DB_PASSWORD: notes_dev_root_pw
+  NOTES_DB_NAME: notes_web
+  JWT_SECRET: ci-test-secret-not-for-production-use
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: notes_dev_root_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pnotes_dev_root_pw --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Wait for MySQL to accept connections
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -pnotes_dev_root_pw --silent; then
+              echo "MySQL is up"
+              exit 0
+            fi
+            echo "Waiting for MySQL... ($i)"
+            sleep 2
+          done
+          echo "MySQL did not become ready in time" >&2
+          exit 1
+
+      - name: Apply schema (001_init + 002_add_users)
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -pnotes_dev_root_pw < db/migrations/001_init.sql
+          mysql -h 127.0.0.1 -P 3306 -uroot -pnotes_dev_root_pw notes_web < db/migrations/002_add_users.sql
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend tests (Jest + Supertest against real MySQL)
+        working-directory: backend
+        run: npm test
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests (Vitest + RTL + msw)
+        working-directory: frontend
+        run: npm test

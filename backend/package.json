@@ -11,10 +11,14 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "@as-integrations/express4": "^1.1.2",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^4.19.2",
+    "graphql": "^16.14.2",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.11.0"
   },
