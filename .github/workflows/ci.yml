@@ -36,7 +36,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 24 para igualar el entorno local real (los tests se validan
+          # ahí): jsdom 30 exige Node >=22.22 y @testing-library/jest-dom 7
+          # exige Node >=22 — con Node 20 el job de frontend falla al arrancar
+          # Vitest aunque `npm ci` instale sin quejarse.
+          node-version: '24'
 
       - name: Wait for MySQL to accept connections
         run: |
@@ -72,7 +76,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 24 para igualar el entorno local real (los tests se validan
+          # ahí): jsdom 30 exige Node >=22.22 y @testing-library/jest-dom 7
+          # exige Node >=22 — con Node 20 el job de frontend falla al arrancar
+          # Vitest aunque `npm ci` instale sin quejarse.
+          node-version: '24'
 
       - name: Install frontend dependencies
         working-directory: frontend
