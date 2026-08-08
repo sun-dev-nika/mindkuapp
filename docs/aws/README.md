@@ -1,9 +1,12 @@
 # Despliegue en AWS — evidencia de portafolio
 
-> **Estado: los recursos fueron destruidos tras capturar la evidencia.**
+> **Estado: los recursos fueron destruidos el 2026-08-08 tras capturar la
+> evidencia** — auditoría recurso por recurso en
+> [`evidence/teardown-auditoria.txt`](evidence/teardown-auditoria.txt).
 > El despliegue vivo del proyecto sigue siendo Railway (backend + MySQL) y
 > Vercel (frontend). Este documento describe una migración real que se montó,
 > se verificó de punta a punta y se desmanteló, con un costo total de $0.
+> La infraestructura estuvo viva unos 45 minutos.
 
 Todo se hizo con AWS CLI desde la línea de comandos, en la región
 **us-east-2 (Ohio)**, sobre una cuenta nueva bajo el Free Tier basado en

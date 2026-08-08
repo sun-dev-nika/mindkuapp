@@ -21,6 +21,7 @@ esto es el registro de que existieron y funcionaron.
 |---|---|
 | [`recursos.txt`](recursos.txt) | Inventario de los recursos creados, incluida la confirmación de **0 Elastic IPs** |
 | [`verificacion-e2e.txt`](verificacion-e2e.txt) | Verificación end-to-end por HTTP de los 11 pasos del flujo, incluyendo GraphQL y el 401 sin sesión |
+| [`teardown-auditoria.txt`](teardown-auditoria.txt) | Auditoría del desmantelamiento: cada tipo de recurso en cero, el orden en que se destruyó y por qué, y qué se dejó vivo a propósito |
 
 ## Nota sobre el listado tras crear
 
