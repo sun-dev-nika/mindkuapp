@@ -1,0 +1,14 @@
+Billing Dashboard — AWS Billing and Cost Management
+Cuenta: 593077778246 (joaquinagar)
+Consultado: 2026-08-08 13:39 GMT-4 (page refresh time del dashboard)
+
+Billing period: August 1 - August 31, 2026
+Estimated grand total: USD 0.00
+
+"No data / There is no data to display" en el detalle de cargos: sin líneas
+de costo para el período, consistente con que toda la infraestructura
+(RDS, EC2, CloudFront, S3) se creó y se destruyó dentro del mismo mes y
+quedó cubierta por los créditos del Free Tier sin generar cargo.
+
+Confirmación visual del humano vía captura de pantalla de la consola de AWS,
+sección Billing and Cost Management → Bills.
