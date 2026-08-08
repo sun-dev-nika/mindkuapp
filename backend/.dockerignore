@@ -1,0 +1,12 @@
+# Nada de esto entra al contexto de build:
+#  - node_modules/dist: se regeneran dentro de la imagen (npm ci / tsc).
+#  - tests: no forman parte del runtime.
+#  - .env*: los secretos NUNCA viajan dentro de la imagen (en EC2 llegan
+#    desde SSM Parameter Store como variables de entorno del contenedor).
+node_modules
+dist
+tests
+coverage
+.env
+.env.*
+!.env.example

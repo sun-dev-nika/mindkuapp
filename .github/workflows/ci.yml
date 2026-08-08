@@ -89,3 +89,64 @@ jobs:
       - name: Run frontend tests (Vitest + RTL + msw)
         working-directory: frontend
         run: npm test
+
+  # Deploy del frontend a S3 + CloudFront (feature 20, `aws_deploy`).
+  #
+  # `needs` obliga a que ambos jobs de tests estén verdes: el gate de la
+  # feature 17 sigue intacto y este job nunca puede desplegar sobre tests
+  # rojos. Solo corre en push a main (en un PR el token OIDC tendría un
+  # `sub` distinto al que confía el rol y fallaría por diseño).
+  #
+  # La guarda `vars.AWS_DEPLOY_ENABLED == 'true'` existe porque la infra AWS
+  # de esta feature es evidencia temporal: al hacer el teardown se pone esa
+  # variable de repositorio en `false` y el job se salta limpiamente, sin
+  # dejar el CI rojo apuntando a recursos que ya no existen. El job queda en
+  # el repo como parte de la evidencia documentada.
+  deploy-frontend-aws:
+    needs: [backend-tests, frontend-tests]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      vars.AWS_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+
+    # OIDC en vez de access keys de larga vida guardadas como secrets: GitHub
+    # emite un token efímero que AWS canjea por credenciales temporales.
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: 'Build frontend (same-origin: la API va detrás del mismo CloudFront)'
+        working-directory: frontend
+        # VITE_API_BASE_URL vacío hace que `httpClient.ts` emita rutas
+        # relativas (`/notes`, `/auth/...`), que CloudFront enruta al origin
+        # EC2. Así no hay mixed content (página HTTPS → API HTTP) ni CORS.
+        env:
+          VITE_API_BASE_URL: ''
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: Sync build to S3
+        run: aws s3 sync frontend/dist "s3://${{ vars.AWS_FRONTEND_BUCKET }}" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"

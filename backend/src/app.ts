@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 
+import { checkDbConnection } from './db';
 import { ApiError } from './errors';
 import { buildContext, type GraphQLContext } from './graphql/context';
 import { resolvers } from './graphql/resolvers';
@@ -49,6 +50,26 @@ export const app = express();
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+/**
+ * Deliberadamente SIN `requireAuth`: lo consume el healthcheck de Docker/EC2
+ * (feature `aws_deploy`), que no tiene ni puede tener una cookie de sesión.
+ * Hace un `SELECT 1` real contra el pool de `db.ts` en vez de responder 200
+ * sin más — así un contenedor "arriba" pero con la DB caída (RDS
+ * inalcanzable, credenciales rotadas, etc.) se reporta como no saludable en
+ * vez de pasar el healthcheck igual. El 503 no incluye el detalle del error
+ * (mismo criterio que el middleware de error de abajo: nunca se filtra un
+ * mensaje interno al cliente).
+ */
+app.get('/health', async (_req: Request, res: Response) => {
+  const dbOk = await checkDbConnection();
+  if (!dbOk) {
+    res.status(503).json({ status: 'error', db: 'unreachable' });
+    return;
+  }
+  res.status(200).json({ status: 'ok', db: 'ok' });
+});
+
 app.use('/auth', authRouter);
 // `requireAuth` se monta ACÁ, antes de `notesRouter` y después de
 // `authRouter`: todo `/notes/*` exige sesión válida, pero `/auth/register` y

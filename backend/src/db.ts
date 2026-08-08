@@ -8,6 +8,18 @@ const DEFAULT_USER = 'root';
 const DEFAULT_PASSWORD = '';
 const DEFAULT_DATABASE = 'notes_web';
 
+/**
+ * RDS exige TLS para conexiones externas en la configuración por defecto de
+ * la feature `aws_deploy`. `NOTES_DB_SSL=true` activa `ssl: 'Amazon RDS'`,
+ * un perfil que mysql2 resuelve internamente vía `aws-ssl-profiles`
+ * (dependencia transitiva ya instalada junto con mysql2, no una dependencia
+ * nueva del proyecto) con el bundle de CAs de Amazon — no hace falta
+ * commitear ni descargar ningún certificado a mano. En local (MySQL sin
+ * TLS, en Docker o instalado directo) la variable queda sin definir y el
+ * pool se comporta exactamente igual que antes de esta feature.
+ */
+const useRdsSsl = process.env.NOTES_DB_SSL === 'true';
+
 export const pool = mysql.createPool({
   host: process.env.NOTES_DB_HOST || DEFAULT_HOST,
   port: Number(process.env.NOTES_DB_PORT) || DEFAULT_PORT,
@@ -16,7 +28,23 @@ export const pool = mysql.createPool({
   database: process.env.NOTES_DB_NAME || DEFAULT_DATABASE,
   waitForConnections: true,
   connectionLimit: 10,
+  ...(useRdsSsl ? { ssl: 'Amazon RDS' } : {}),
 });
+
+/**
+ * Verifica que la conexión a MySQL responde, usada por `GET /health`
+ * (`app.ts`) para el healthcheck de Docker/EC2. Un `SELECT 1` es la forma
+ * estándar de comprobar "la DB está viva" sin depender de que exista ninguna
+ * tabla en particular — no toca `notes` ni `users`.
+ */
+export async function checkDbConnection(): Promise<boolean> {
+  try {
+    await pool.query('SELECT 1');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Fila cruda tal como la devuelve el driver (columnas snake_case). */
 interface NoteRow {
