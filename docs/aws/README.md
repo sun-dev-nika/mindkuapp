@@ -110,6 +110,31 @@ GitHub Actions no guarda claves de AWS: asume el rol `mindku-github-deploy`
 por OIDC, y la trust policy exige que el token venga exactamente de
 `repo:sun-dev-nika/mindkuapp:ref:refs/heads/main`.
 
+## Qué pasó con el CI/CD (y qué demuestra)
+
+El job `deploy-frontend-aws` se agregó al workflow existente con
+`needs: [backend-tests, frontend-tests]`, así que nunca puede desplegar sobre
+tests rojos, y con una guarda `vars.AWS_DEPLOY_ENABLED == 'true'` pensada para
+el momento del desmantelamiento.
+
+Al mergear el PR, la variable todavía estaba en `true` y la infraestructura ya
+había sido destruida, así que el job corrió y **falló en el paso
+`Configure AWS credentials (OIDC)`** al intentar asumir un rol inexistente.
+Los dos jobs de tests pasaron en verde en la misma corrida.
+
+Eso deja dos cosas demostradas:
+
+1. **El gate funciona como se diseñó.** Un fallo en el deploy no contamina la
+   validación de los tests: son jobs separados y el deploy depende de ellos,
+   no al revés.
+2. **El cableado del CI/CD es real.** El job llegó a ejecutar el paso de OIDC
+   contra AWS; no falló por configuración del workflow, sino porque el rol
+   `mindku-github-deploy` ya estaba borrado. Con la infraestructura viva, el
+   mismo paso hubiera obtenido credenciales temporales.
+
+Con `AWS_DEPLOY_ENABLED=false` el job se salta limpiamente y el workflow
+vuelve a verde, que es el estado en el que queda el repositorio.
+
 ## Antes y después
 
 | | Railway + Vercel (vivo) | AWS (esta evidencia) |
