@@ -9,6 +9,12 @@ notas, con links directos y compartibles a cada nota.
 - **Backend (API):** https://mindkuapp-production.up.railway.app
 - **Base de datos:** MySQL en Railway
 
+El mismo proyecto se desplegó además sobre AWS (EC2 + RDS + S3/CloudFront,
+con CI/CD por OIDC) como ejercicio de infraestructura, se verificó de punta a
+punta y se desmanteló después de capturar la evidencia — costo total $0.
+Arquitectura, decisiones y comparación "antes vs. después" en
+[`docs/aws/README.md`](docs/aws/README.md).
+
 ## Stack
 
 - **Backend:** Node.js + Express + TypeScript, MySQL sin ORM (`mysql2`,

@@ -1,0 +1,14 @@
+[1] distribucion: Deployed
+=== verificacion E2E final ===
+1. frontend            http=200
+2. ruta SPA /notes/1   http=200 tipo=text/html
+3. /api/health         {"status":"ok","db":"ok"}
+4. registro            http=201
+5. login               http=200
+6. /api/auth/me        {"id":3,"email":"final@mindku.cl","createdAt":"2026-08-08T08:09:48.000Z"}
+7. crear nota          {"id":2,"title":"Nota final","body":"E2E completo","createdAt":"2026-08-08T08:09:49.899Z","updatedAt":"2026-08-08T08:09:49.899Z"}
+8. listar              [{"id":2,"title":"Nota final","body":"E2E completo","createdAt":"2026-08-08T08:09:50.000Z","updatedAt":"2026-08-08T08:09:50.000Z"}]
+9. buscar              [{"id":2,"title":"Nota final","body":"E2E completo","createdAt":"2026-08-08T08:09:50.000Z","updatedAt":"2026-08-08T08:09:50.000Z"}]
+10. GraphQL            {"data":{"notes":[{"id":"2","title":"Nota final"}]}}
+
+11. sin sesion (401)   http=401
