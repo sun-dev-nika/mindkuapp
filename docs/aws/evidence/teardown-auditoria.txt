@@ -1,0 +1,45 @@
+AUDITORIA DE TEARDOWN — 2026-08-08 08:33 UTC
+Cuenta 593077778246, region us-east-2
+
+RECURSOS DE COMPUTO Y ALMACENAMIENTO
+  Instancias EC2 no terminadas ....... 0
+  Volumenes EBS ...................... 0
+  Snapshots propios .................. 0
+  Elastic IPs ........................ 0   <- nunca se creo ninguna
+  Key pairs .......................... 0
+  Security groups mindku ............. 0
+  Instancias RDS ..................... 0
+  Snapshots RDS ...................... 0
+  Buckets S3 ......................... 0
+  Distribuciones CloudFront .......... 0
+  Parametros SSM mindku .............. 0
+
+RECURSOS IAM (verificados uno a uno con get-*, porque la policy de
+permisos minimos del usuario que despliega no incluye iam:ListRoles ni
+iam:ListOpenIDConnectProviders — otra confirmacion de que no es
+AdministratorAccess)
+  Rol mindku-ec2-role ................ ELIMINADO (NoSuchEntity)
+  Rol mindku-github-deploy ........... ELIMINADO (NoSuchEntity)
+  Instance profile mindku-ec2-profile  ELIMINADO (NoSuchEntity)
+  Proveedor OIDC de GitHub ........... ELIMINADO (NoSuchEntity)
+
+SE DEJAN VIVOS A PROPOSITO (no cuestan nada y sirven de red de seguridad)
+  Alarma  mindku-billing-1usd   estado OK   umbral 1.0 USD
+  Suscripcion SNS  jiagar@miuandes.cl  (email, confirmada)
+
+ORDEN DE DESMANTELAMIENTO
+  1. EC2 terminada y RDS eliminada primero: son los unicos recursos que
+     cobran por hora de computo.
+  2. Parametros de SSM (incluidos los SecureString con la password de la
+     base y el JWT_SECRET) y key pair.
+  3. CloudFront deshabilitada, esperada hasta Deployed, y recien entonces
+     eliminada — AWS no permite borrar una distribucion habilitada.
+  4. OAC, bucket S3 vaciado y eliminado.
+  5. Security groups: primero el del RDS, que referencia al del backend.
+  6. Roles IAM, instance profile y proveedor OIDC.
+
+TIEMPO TOTAL DE VIDA DE LA INFRAESTRUCTURA
+  RDS creado    2026-08-08 07:45 UTC
+  EC2 lanzado   2026-08-08 07:48 UTC
+  Teardown      2026-08-08 08:33 UTC
+  Aproximadamente 45 minutos.

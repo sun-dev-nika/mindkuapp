@@ -1,9 +1,12 @@
 # Despliegue en AWS — evidencia de portafolio
 
-> **Estado: los recursos fueron destruidos tras capturar la evidencia.**
+> **Estado: los recursos fueron destruidos el 2026-08-08 tras capturar la
+> evidencia** — auditoría recurso por recurso en
+> [`evidence/teardown-auditoria.txt`](evidence/teardown-auditoria.txt).
 > El despliegue vivo del proyecto sigue siendo Railway (backend + MySQL) y
 > Vercel (frontend). Este documento describe una migración real que se montó,
 > se verificó de punta a punta y se desmanteló, con un costo total de $0.
+> La infraestructura estuvo viva unos 45 minutos.
 
 Todo se hizo con AWS CLI desde la línea de comandos, en la región
 **us-east-2 (Ohio)**, sobre una cuenta nueva bajo el Free Tier basado en
@@ -106,6 +109,31 @@ acotada con una condición a `rds.amazonaws.com`.
 GitHub Actions no guarda claves de AWS: asume el rol `mindku-github-deploy`
 por OIDC, y la trust policy exige que el token venga exactamente de
 `repo:sun-dev-nika/mindkuapp:ref:refs/heads/main`.
+
+## Qué pasó con el CI/CD (y qué demuestra)
+
+El job `deploy-frontend-aws` se agregó al workflow existente con
+`needs: [backend-tests, frontend-tests]`, así que nunca puede desplegar sobre
+tests rojos, y con una guarda `vars.AWS_DEPLOY_ENABLED == 'true'` pensada para
+el momento del desmantelamiento.
+
+Al mergear el PR, la variable todavía estaba en `true` y la infraestructura ya
+había sido destruida, así que el job corrió y **falló en el paso
+`Configure AWS credentials (OIDC)`** al intentar asumir un rol inexistente.
+Los dos jobs de tests pasaron en verde en la misma corrida.
+
+Eso deja dos cosas demostradas:
+
+1. **El gate funciona como se diseñó.** Un fallo en el deploy no contamina la
+   validación de los tests: son jobs separados y el deploy depende de ellos,
+   no al revés.
+2. **El cableado del CI/CD es real.** El job llegó a ejecutar el paso de OIDC
+   contra AWS; no falló por configuración del workflow, sino porque el rol
+   `mindku-github-deploy` ya estaba borrado. Con la infraestructura viva, el
+   mismo paso hubiera obtenido credenciales temporales.
+
+Con `AWS_DEPLOY_ENABLED=false` el job se salta limpiamente y el workflow
+vuelve a verde, que es el estado en el que queda el repositorio.
 
 ## Antes y después
 
