@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 
+import { checkDbConnection } from './db';
 import { ApiError } from './errors';
 import { buildContext, type GraphQLContext } from './graphql/context';
 import { resolvers } from './graphql/resolvers';
@@ -39,6 +40,31 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? DEFAULT_FRONTEND_ORIGIN)
 
 export const app = express();
 
+/**
+ * En AWS (feature `aws_deploy`) el frontend (S3) y el backend (EC2) quedan
+ * detrás del MISMO dominio de CloudFront, que enruta por patrón de path
+ * (`/notes*` → backend, todo lo demás → `index.html` del SPA) porque una
+ * distribución de CloudFront no puede decidir por "es una API" vs. "es una
+ * ruta de React Router" — solo mira el path. El problema real: la feature 11
+ * define `/notes/:id` como ruta del SPA (link compartible a una nota), que
+ * colisiona exactamente con `/notes/:id` del backend (ver `id` en
+ * `notes.ts`). Verificado en producción: `GET /notes/1/x` volvía un 401 del
+ * backend en vez de servir `index.html`, o sea que abrir el link de una nota
+ * en el navegador se rompía.
+ *
+ * La solución NO es un prefijo distinto en el SPA (`/notes/:id` es un
+ * requisito ya cerrado de la feature 11, no se toca) sino exponer la API
+ * completa TAMBIÉN bajo `/api` — así el behavior de CloudFront puede
+ * apuntar `/api/*` al backend sin ambigüedad, dejando `/notes/*` libre para
+ * que siempre resuelva al SPA. Las rutas sin prefijo (`/notes`,
+ * `/auth/...`, `/graphql`, `/health`) se mantienen intactas para no romper
+ * los tests existentes ni el deploy vivo de Railway (que no tiene este
+ * problema porque frontend y backend están en dominios separados). Montar
+ * los mismos routers bajo ambos prefijos con un loop evita duplicar cada
+ * ruta a mano y mantiene un solo lugar de verdad por endpoint.
+ */
+const API_PREFIXES = ['', '/api'] as const;
+
 // `credentials: true` es lo que le dice al navegador "está bien mandar/
 // aceptar cookies en peticiones cross-origin a este backend" — sin esto, la
 // cookie de sesión (httpOnly, fijada por POST /auth/login) nunca viajaría de
@@ -49,11 +75,35 @@ export const app = express();
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/auth', authRouter);
-// `requireAuth` se monta ACÁ, antes de `notesRouter` y después de
-// `authRouter`: todo `/notes/*` exige sesión válida, pero `/auth/register` y
-// `/auth/login` (que todavía no tienen sesión) no pasan por este middleware.
-app.use('/notes', requireAuth, notesRouter);
+
+/**
+ * Deliberadamente SIN `requireAuth`: lo consume el healthcheck de Docker/EC2
+ * (feature `aws_deploy`), que no tiene ni puede tener una cookie de sesión.
+ * Hace un `SELECT 1` real contra el pool de `db.ts` en vez de responder 200
+ * sin más — así un contenedor "arriba" pero con la DB caída (RDS
+ * inalcanzable, credenciales rotadas, etc.) se reporta como no saludable en
+ * vez de pasar el healthcheck igual. El 503 no incluye el detalle del error
+ * (mismo criterio que el middleware de error de abajo: nunca se filtra un
+ * mensaje interno al cliente).
+ */
+async function healthHandler(_req: Request, res: Response): Promise<void> {
+  const dbOk = await checkDbConnection();
+  if (!dbOk) {
+    res.status(503).json({ status: 'error', db: 'unreachable' });
+    return;
+  }
+  res.status(200).json({ status: 'ok', db: 'ok' });
+}
+
+for (const prefix of API_PREFIXES) {
+  app.get(`${prefix}/health`, healthHandler);
+  app.use(`${prefix}/auth`, authRouter);
+  // `requireAuth` se monta ACÁ, antes de `notesRouter` y después de
+  // `authRouter`: todo `/notes/*` (y `/api/notes/*`) exige sesión válida,
+  // pero `/auth/register` y `/auth/login` (que todavía no tienen sesión) no
+  // pasan por este middleware.
+  app.use(`${prefix}/notes`, requireAuth, notesRouter);
+}
 
 /**
  * `/graphql` es una capa alternativa sobre el mismo dominio de notas, no un
@@ -91,11 +141,13 @@ const apolloServer = new ApolloServer<GraphQLContext>({
  * REST no la necesitan porque nunca tocan esa ruta.
  */
 export const graphqlServerReady: Promise<void> = apolloServer.start().then(() => {
-  app.use(
-    '/graphql',
-    express.json(),
-    expressMiddleware(apolloServer, { context: buildContext }),
-  );
+  for (const prefix of API_PREFIXES) {
+    app.use(
+      `${prefix}/graphql`,
+      express.json(),
+      expressMiddleware(apolloServer, { context: buildContext }),
+    );
+  }
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express solo reconoce
